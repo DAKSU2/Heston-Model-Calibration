@@ -1,0 +1,61 @@
+# Data subsetting from general data file
+if (!require("DEoptim")) install.packages("DEoptim")
+library(DEoptim)
+if (!require("NMOF")) install.packages("NMOF")
+library(NMOF)
+
+options(scipen = 50)
+Option <- read.csv("~/Desktop/calibration/Option.csv")
+Apple <- Option[Option$UnderlyingSymbol == 'AAPL',]
+Apple_CalL <- Apple[Apple$Type == 'call',]
+
+# Constructing time to maturity matrix, consider only one trading date for the sake of simplicity
+mat0 <- matrix(, nrow = 58, ncol = 1)
+mat0[1:58,] <- 1/252
+
+# Set up the function
+Rosenbrock <- function(X) {
+  X1 <- X[1]  # the initial variance
+  X2 <- X[2]  # the long variance
+  X3 <- X[3]  # the correlation of the two Wiener processes
+  X4 <- X[4]  # the rate at which initial variance reverts to long variance
+  X5 <- X[5]  # the volatility of the volatility
+  X1 < X2
+  r <- 0
+  q <- 0
+  for (i in seq_along(1:58)){
+    Hes_Price <- rep(0, times=58)
+    Diff <- rep(0, times=58)
+    Hes_Price[i] <- callHestoncf(Apple_CalL[i, 2], Apple_CalL[i, 9], mat0[i, 1], r, q, X1, X2, X3, X4, X5)
+    Diff[i] <- (Hes_Price[i] - (Apple_CalL[i,12] + Apple_CalL[i,11])/2)
+  }
+  sqrt((sum(Diff)**2)/58)
+}
+
+# Set up lower and upper bounds.
+lower <- c(0.02^2, 0.02^2, -1, 0.01, 0.01)
+upper <- c(0.90^2, 0.90^2, 1, 5.00, 0.06)
+
+# Optimization
+out<-DEoptim(Rosenbrock, lower, upper,control = list(NP = 60, itermax = 10))
+
+Heston_Parameters<-out$optim$bestmem
+
+# Set Parameters to test only first price
+
+X1 <- Heston_Parameters[1]  # the initial variance
+X2 <- Heston_Parameters[2]  # the long variance
+X3 <- Heston_Parameters[3]  # the correlation of the two Wiener processes
+X4 <- Heston_Parameters[4]  # the rate at which initial variance reverts to long variance
+X5 <- Heston_Parameters[5]  # the volatility of the volatility
+r <- 0
+q <- 0
+callHestoncf(Apple_CalL[1,2], Apple_CalL[1,9], 1/252, r, q, X1, X2, X3, X4, X5)
+
+# Subsetting Number of correct prices in the calibration
+Hes_Price <- rep(0, times=58)
+for (i in seq_along(1:58)){
+  Hes_Price[i] <- callHestoncf(Apple_CalL[i, 2], Apple_CalL[i, 9], 1/252, r, q, X1, X2, X3, X4, X5)
+}
+lambda_vals_train <- subset(Hes_Price, Hes_Price >= Apple_CalL[1:58,11] & Hes_Price <= Apple_CalL[1:58,12])
+length(lambda_vals_train) # gives us the number of price within bid-ask spread
