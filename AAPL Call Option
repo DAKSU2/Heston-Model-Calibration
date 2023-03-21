@@ -58,4 +58,4 @@ for (i in seq_along(1:58)){
   Hes_Price[i] <- callHestoncf(Apple_CalL[i, 2], Apple_CalL[i, 9], 1/252, r, q, X1, X2, X3, X4, X5)
 }
 lambda_vals_train <- subset(Hes_Price, Hes_Price >= Apple_CalL[1:58,11] & Hes_Price <= Apple_CalL[1:58,12])
-length(lambda_vals_train) # gives us the number of price within bid-ask spread
+length(lambda_vals_train) # gives us the number of price within bid-ask spread.
