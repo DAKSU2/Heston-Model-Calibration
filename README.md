@@ -1,0 +1,1 @@
+This is not a new dataset, but it demonstrates how powerful the Heston model can be when it comes to equity option valuation. There are quite a few simplifying assumptions in the analysis—apologies for that. I didn’t have enough time to incorporate interest rates and some of the other inputs properly.
